@@ -28,7 +28,7 @@ from ultralytics import YOLO
 # ============================================================================
 
 MODELO = "yolo26n.pt"   # nano = mais rápido. Fallback: "yolo11n.pt".
-CAMERA = 1              # índice da webcam (tente 1 se não abrir).
+CAMERA = 1              # índice da webcam.
 CONFIANCA_MINIMA = 0.45
 MAX_ANUNCIOS = 2         # quantos objetos "falar" por ciclo (priorização).
 INTERVALO_ANUNCIO = 1.8  # segundos entre ciclos normais de anúncio.
@@ -158,7 +158,7 @@ def main() -> None:
 
     cap = cv.VideoCapture(CAMERA)
     if not cap.isOpened():
-        print(f"ERRO: não consegui abrir a câmera {CAMERA}. Tente CAMERA = 1.")
+        print(f"ERRO: não consegui abrir a câmera {CAMERA}.")
         return
 
     print("Câmera aberta. Pressione 'q' para sair.\n")
