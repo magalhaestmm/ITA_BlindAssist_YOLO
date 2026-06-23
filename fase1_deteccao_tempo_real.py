@@ -19,6 +19,8 @@ Como rodar:
 
 import time
 from collections import defaultdict
+from voz import MotorDeVoz
+from camera import CameraTempoReal
 
 import cv2 as cv
 from ultralytics import YOLO
@@ -31,9 +33,9 @@ MODELO = "yolo26n.pt"   # nano = mais rápido. Fallback: "yolo11n.pt".
 CAMERA = 1              # índice da webcam.
 CONFIANCA_MINIMA = 0.45
 MAX_ANUNCIOS = 2         # quantos objetos "falar" por ciclo (priorização).
-INTERVALO_ANUNCIO = 1.8  # segundos entre ciclos normais de anúncio.
+INTERVALO_ANUNCIO = 3.5  # segundos entre ciclos normais de anúncio.
 COOLDOWN_OBJETO = 4.0    # segundos para não repetir o MESMO objeto+direção.
-COOLDOWN_URGENTE = 1.5   # urgentes podem se repetir mais rápido.
+COOLDOWN_URGENTE = 3.0   # urgentes podem se repetir mais rápido.
 MOSTRAR_JANELA = True
 
 # Zonas horizontais (centro do objeto). "à frente" = caminho de colisão.
@@ -143,7 +145,7 @@ def calcular_prioridade(nome: str, direcao: str, distancia: str) -> float:
     return peso * fd * fdist
 
 
-def anunciar(frase: str, urgente: bool = False) -> None:
+def anunciar(frase: str, urgente: bool = False, motor = None) -> None:
     """
     Saída para o usuário. FASE 1: imprime. FASE 3: troque por voz (pyttsx3).
     Itens urgentes ganham um prefixo de alerta.
@@ -151,12 +153,18 @@ def anunciar(frase: str, urgente: bool = False) -> None:
     prefixo = "⚠️  ATENÇÃO: " if urgente else "🔊 "
     print(f"  {prefixo}{frase}")
 
+    if motor:
+        motor.falar(frase, limpar_fila=urgente)
+
 
 def main() -> None:
     print(f"Carregando modelo {MODELO}...")
     modelo = YOLO(MODELO)
 
-    cap = cv.VideoCapture(CAMERA)
+    motor_voz = MotorDeVoz()
+
+    cap = CameraTempoReal(CAMERA)
+
     if not cap.isOpened():
         print(f"ERRO: não consegui abrir a câmera {CAMERA}.")
         return
@@ -214,8 +222,7 @@ def main() -> None:
         for d in urgentes:
             chave = (d["nome"], d["direcao"])
             if agora - ultimo_anuncio[chave] >= COOLDOWN_URGENTE:
-                anunciar(f"{d['nome']} {d['direcao']}, {d['distancia']}",
-                         urgente=True)
+                anunciar(f"{d['nome']} {d['direcao']}, {d['distancia']}", urgente=True, motor = motor_voz)
                 ultimo_anuncio[chave] = agora
 
         # 2) NÃO-URGENTES seguem o ritmo calmo, no máximo MAX_ANUNCIOS por ciclo.
@@ -260,6 +267,7 @@ def main() -> None:
 
     cap.release()
     cv.destroyAllWindows()
+    motor_voz.encerrar()
     print("\nEncerrado.")
 
 
